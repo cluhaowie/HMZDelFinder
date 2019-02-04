@@ -511,7 +511,7 @@ calculateZscores <- function(filteredCalls,rpkmDtOrdered){
 									val <- mm[sampleIdx, position + j -1 ]
 									vv <- sort(mm[-sampleIdx, position + j -1])
 									x<- c(val,vv)
-									(x[1] - mean(x))/sd(x)			
+									(x[1] - mean(x))/mad(x)			
 								}))
 				
 			})

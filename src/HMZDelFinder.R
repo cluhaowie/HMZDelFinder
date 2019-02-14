@@ -630,12 +630,12 @@ printBanner <- function()
 ##' @param repoter				a data.table provide ref for annotating BAB and metaproject				     
 ##------------------------------------------------------------------------------
 
-runHMZDelFinder <- function(snpPaths, snpFids,
+runHMZDelFinder <- function(
 		rpkmPaths, rpkmFids,
-		mc.cores, aohRDataOut,
+		mc.cores, extAOH,
 		bedFile, lowRPKMthreshold,
 		minAOHsize, minAOHsig, is_cmg, 
-		vR_id, tR_id, filter)
+		filter)
 {
 	
 	library(gdata)
@@ -656,7 +656,7 @@ runHMZDelFinder <- function(snpPaths, snpFids,
 	printBanner()
 	print("[step 1 out of 7] ******  AOH data ******")
 	
-	extAOH <- NULL
+	extAOH <- extAOH
 	
 	print("[step 2 out of 7] ****** Preparing RPKM data ******")
 	selectedFidsIdx <- 1:length(rpkmFids)

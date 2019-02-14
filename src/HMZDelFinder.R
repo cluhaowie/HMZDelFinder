@@ -255,7 +255,7 @@ prepareRPKMData <- function(fileNames, fids, mc.cores)
 				t <- fread(file)
 				t$File <- fid
 				t
-			}, mc.cores=mc.cores)
+			}, mc.cores=1)
 	
 	names(rpkmList) <- fids
 	print ("Removing empty elements ...")

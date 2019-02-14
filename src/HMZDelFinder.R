@@ -346,23 +346,22 @@ processRPKM <- function(rpkmDtOrdered, bedOrdered, mc.cores, lowRPKMthreshold ,e
 ##------------------------------------------------------------------------------
 getCandidateExonCalls <- function(rpkmDtOrdered, bedOrdered, selectedExonsFinal,  mc.cores, lowRPKMthreshold)
 {
-  selectedExonsDT<- rpkmDtOrdered[,selectedExonsFinal,with=F]
-  print("Calling deletions")
-  calls1 <- mclapply2((1:nrow(rpkmDtOrdered)), function(i){
-    #candidateDels <- data.table(bedOrdered[selectedExonsFinal,][which(selectedExonsDT[i,]<lowRPKMthreshold),])
-    candidateDels <- data.table(bedOrdered[selectedExonsFinal,][,]) #get all the call out
-    gc()
-    if (nrow(candidateDels)==0){return(NULL)}
-    candidateDels
-  }, mc.cores=mc.cores)
-  
-  calls2 <- lapply((1:nrow(rpkmDtOrdered)), function(i){
-    res <- calls1[[i]]
-    if (!is.null(res))res$Sample <- rownames(rpkmDtOrdered)[i]
-    res
-  })
-  candidates <- rbindlist(calls2)
-  candidates
+	selectedExonsDT<- rpkmDtOrdered[,selectedExonsFinal,with=F]
+	print("Calling deletions")
+	calls1 <- mclapply2((1:nrow(rpkmDtOrdered)), function(i){
+				candidateDels <- data.table(bedOrdered[selectedExonsFinal,][which(selectedExonsDT[i,]<lowRPKMthreshold),])
+				gc()
+				if (nrow(candidateDels)==0){return(NULL)}
+				candidateDels
+			}, mc.cores=mc.cores)
+	
+	calls2 <- lapply((1:nrow(rpkmDtOrdered)), function(i){
+				res <- calls1[[i]]
+				if (!is.null(res))res$Sample <- rownames(rpkmDtOrdered)[i]
+				res
+			})
+	candidates <- rbindlist(calls2)
+	candidates
 }
 
 
@@ -428,18 +427,21 @@ mergeCandidates <- function(candidateExonCalls, bedOrdered, maxGap = 10)
 ##' 
 ##' @param candidatesMerged   object returned by mergeCandidates
 ##------------------------------------------------------------------------------
-annotateCandidates <- function(candidatesMerged, report, is_cmg=T)
+annotateCandidates <- function(candidatesMerged, is_cmg=FALSE)
 {
-  candidatesMerged$BAB <- candidatesMerged$FID;
-  candidatesMerged$project <- ""
-  if (is_cmg)
-  {
-    report <- report[-which(report$Fid=="NA"),]
-    candidatesMerged$BAB <- report$Internal.Processing.Sample.ID[match(candidatesMerged$FID, report$Fid)]
-    candidatesMerged$project <- report$Metaproject[match(candidatesMerged$FID, report$Fid)]
-    candidatesMerged$BAB[is.na(candidatesMerged$BAB)] <- candidatesMerged$FID[is.na(candidatesMerged$BAB)]
-  }
-  candidatesMerged
+	candidatesMerged$BAB <- candidatesMerged$FID;
+	candidatesMerged$project <- ""
+	if (is_cmg)
+	{
+		source("/mnt/bigData/cmg/SRC/CNV/data_handler/load_meta_func.R")
+		report <- downloadReport()
+		report$Fid <- sapply(strsplit(report$Path, "_"), function(x){if (length(x)==0 | !isProperFid(x[length(x)])){return (NA)}; x[length(x)]})
+		report <- report[-which(is.na(report$Fid)),]
+		candidatesMerged$BAB <- report$Internal.Processing.Sample.ID[match(candidatesMerged$FID, report$Fid)]
+		candidatesMerged$project <- report$Metaproject[match(candidatesMerged$FID, report$Fid)]
+		candidatesMerged$BAB[is.na(candidatesMerged$BAB)] <- candidatesMerged$FID[is.na(candidatesMerged$BAB)]
+	}
+	candidatesMerged
 }
 
 
@@ -617,25 +619,28 @@ printBanner <- function()
 ##' Main function: return HMZ deletion calls 
 ##' 
 ##' 
+##' @param snpPaths				list of paths to VCFs with SNP data; if NULL algorithm skips AOH analysis
+##' @param snpFids				list of sample identifiers (in the same order as in snpFileNames); if NULL algorithm skips AOH analysis
 ##' @param rpkmPath				list of paths to RPKM data
 ##' @param rpkmFids				list of sample identifiers (in the same order as in rpkmPaths)
 ##' @param mc.cores				number of cores 
-##' @param extAOH				load extAOH object
+##' @param aohRDataOut			temporary file that store AOH data
 ##' @param bedFile				target design file
 ##' @param lowRPKMthreshold		RPKM threshold used in the algorithm (default=0.65)
 ##' @param minAOHsize			minimal size of AOH region (default=1000)
 ##' @param minAOHsig			threshold for calling AOH (default=0.45)
 ##' @param is_cmg				CMG specific annotations (default=FALSE)
-##' @param filter				only variants with this value in the VCF FILTER column will be used in AOH analysis
-##' @param repoter				a data.table provide ref for annotating BAB and metaproject				     
+##' @param vR_id				ID for 'the number of variants reads' in VCF FORMAT column (default='VR')
+##' @param tR_id				ID for 'the number of total reads' in VCF FORMAT column (default='DP')
+##' @param filter				only variants with this value in the VCF FILTER column will be used in AOH analysis  
 ##------------------------------------------------------------------------------
 
-runHMZDelFinder <- function(
+runHMZDelFinder <- function(snpPaths, snpFids,
 		rpkmPaths, rpkmFids,
-		mc.cores, extAOH,
+		mc.cores, aohRDataOut,
 		bedFile, lowRPKMthreshold,
 		minAOHsize, minAOHsig, is_cmg, 
-		filter)
+		vR_id, tR_id, filter)
 {
 	
 	library(gdata)
@@ -645,19 +650,28 @@ runHMZDelFinder <- function(
 	library(matrixStats)
 	
 	## checking input parameters
-	
+	if (!is.null(snpPaths) && any(!file.exists(snpPaths))){print("[ERROR]: One or more paths to VCF file does not exist."); return (NULL)}
 	if ( any(!file.exists(rpkmPaths))){print("[ERROR]: One or more paths to RPKM file does not exist."); return (NULL)}
 	if (is.null(bedFile) || !file.exists(bedFile)){print("[ERROR]: BED file does not exist.");return (NULL)}
 	if (length(rpkmPaths) != length(rpkmFids)){print("[ERROR]: Number of rpkmPaths differ from the number rpkmFids.");return (NULL)}
 	if (length(rpkmPaths) < 10){print("[ERROR]: Please provide at least 10 input files");return (NULL)}
-	
+	if (!is.null(snpPaths) && length(snpPaths) != length(snpFids)){print("[ERROR]: Number of vcfPaths differ from the number vcfFids.");return (NULL)}
 	
 	
 	printBanner()
 	print("[step 1 out of 7] ******  AOH data ******")
 	
-	extAOH <- extAOH
-	
+	extAOH <- NULL
+	if (is.null(snpPaths) || is.null(snpFids)){print("Skipping AOH analysis ...")}
+	else{
+		#if (file.exists(aohRDataOut)){load(aohRDataOut)}else
+		#{
+			library(DNAcopy)
+			extAOH <- prepareAOHData(snpPaths, snpFids, mc.cores, vR_id, tR_id, filter)
+			save(extAOH, file=aohRDataOut)
+		#}
+	}
+		
 	print("[step 2 out of 7] ****** Preparing RPKM data ******")
 	selectedFidsIdx <- 1:length(rpkmFids)
 	if (!is.null(extAOH)) {

@@ -458,6 +458,7 @@ annotateCandidates <- function(candidatesMerged, report, is_cmg=T)
 ##------------------------------------------------------------------------------
 
 annotateAOH <- function(candidatesMergedAnnotated, extAOH, minAOHsize, minAOHsig, mc.cores){
+	aohSize<-minAOHsig
 	if (is.null(extAOH)){
 		candidatesMergedAnnotated[,paste("inAOH", "_", format(aohSize, scientific=F), sep="")] <- TRUE
 		return (candidatesMergedAnnotated)

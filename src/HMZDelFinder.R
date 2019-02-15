@@ -312,29 +312,31 @@ reorderBedAndRpkmDt <- function(bedFile, rpkmDt)
 ##------------------------------------------------------------------------------
 processRPKM <- function(rpkmDtOrdered, bedOrdered, mc.cores, lowRPKMthreshold ,exonsToExclude,  maxFrequency=0.005)
 {
-	print("Computing initial statistics for each exon...")
-	a <- unlist(mclapply2(rpkmDtOrdered,function(x){sum(x<lowRPKMthreshold)}, mc.cores=mc.cores))
-	gc();gc();
-	maxHoms <- ceiling(nrow(rpkmDtOrdered)*maxFrequency)
-	selectedExons <- setdiff(which( a >0 & a <= maxHoms ) , exonsToExclude)
-	
-	print("Selecting a subset of exons with potentiall deletions (may take a while)...")
-	tmp <- rpkmDtOrdered[, selectedExons,with=F]
-	bedTmp <- bedOrdered[selectedExons,]
-	print("Calculating number of potential deletions for each sample (may take a while)...")
-	nrOfPotDeletions <- apply(tmp,1,  function(x){length( which(x<lowRPKMthreshold & bedTmp$V1 != "X"))})
-	print("Detetermining 2% of samples with the highest number of deletions")	
-	toRemSamples <- which(nrOfPotDeletions> quantile(nrOfPotDeletions, 0.98))
-	print("Removing these samples (may take a while)...")
-	rpkmTmp <- rpkmDtOrdered[-toRemSamples,]
-	print("Recomputing per-exon statistics without low quality samples ...")
-	a1 <- unlist(mclapply2(rpkmTmp,function(x){sum(x<lowRPKMthreshold)}, mc.cores=mc.cores))
-	rm(rpkmTmp)
-	gc();gc();
-	selectedExonsFinal <- setdiff((which( a1 >0 & a1 <= maxHoms )), exonsToExclude)
-	list(selectedExonsFinal=selectedExonsFinal, a=a, a1=a1, toRemSamples=toRemSamples)
+  print("Computing initial statistics for each exon...")
+  #a <- unlist(mclapply2(rpkmDtOrdered,function(x){sum(x<lowRPKMthreshold)}, mc.cores=mc.cores))
+  a <- seq(1:ncol(rpkmDtOrdered))
+  gc();gc();
+  maxHoms <- ceiling(nrow(rpkmDtOrdered)*maxFrequency)
+  #selectedExons <- setdiff(which( a >0 & a <= maxHoms ) , exonsToExclude)
+  selectedExons <- setdiff(a, exonsToExclude)
+  print("Selecting a subset of exons with potentiall deletions (may take a while)...")
+  tmp <- rpkmDtOrdered[, selectedExons,with=F]
+  bedTmp <- bedOrdered[selectedExons,]
+  print("Calculating number of potential deletions for each sample (may take a while)...")
+  nrOfPotDeletions <- apply(tmp,1,  function(x){length( which(x<lowRPKMthreshold & bedTmp$V1 != "X"))})
+  print("Detetermining 2% of samples with the highest number of deletions")	
+  toRemSamples <- which(nrOfPotDeletions> quantile(nrOfPotDeletions, 0.98))
+  print("Removing these samples (may take a while)...")
+  #rpkmTmp <- rpkmDtOrdered[-toRemSamples,]
+  rpkmTmp <- rpkmDtOrdered
+  print("Recomputing per-exon statistics without low quality samples ...")
+  a1 <- unlist(mclapply2(rpkmTmp,function(x){sum(x<lowRPKMthreshold)}, mc.cores=mc.cores))
+  rm(rpkmTmp)
+  gc();gc();
+  #selectedExonsFinal <- setdiff((which( a1 >0 & a1 <= maxHoms )), exonsToExclude)
+  selectedExonsFinal <- setdiff(a, exonsToExclude)
+  list(selectedExonsFinal=selectedExonsFinal, a=a, a1=a1, toRemSamples=toRemSamples)
 }
-
 ##------------------------------------------------------------------------------
 ##' Retrieves potential HMZ deletions
 ##' 

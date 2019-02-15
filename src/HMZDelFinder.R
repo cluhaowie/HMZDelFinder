@@ -637,7 +637,7 @@ runHMZDelFinder <- function(
   rpkmPaths, rpkmFids,
   mc.cores, extAOH,
   bedFile, lowRPKMthreshold,
-  minAOHsize, minAOHsig, is_cmg,report
+  minAOHsize, minAOHsig, is_cmg,report,
   filter)
 {
   

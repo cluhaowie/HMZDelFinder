@@ -634,80 +634,80 @@ printBanner <- function()
 ##------------------------------------------------------------------------------
 
 runHMZDelFinder <- function(
-		rpkmPaths, rpkmFids,
-		mc.cores, extAOH,
-		bedFile, lowRPKMthreshold,
-		minAOHsize, minAOHsig, is_cmg, 
-		filter)
+  rpkmPaths, rpkmFids,
+  mc.cores, extAOH,
+  bedFile, lowRPKMthreshold,
+  minAOHsize, minAOHsig, is_cmg,report
+  filter)
 {
-	
-	library(gdata)
-	library(data.table)
-	library(GenomicRanges)
-	library(parallel)
-	library(matrixStats)
-	
-	## checking input parameters
-	
-	if ( any(!file.exists(rpkmPaths))){print("[ERROR]: One or more paths to RPKM file does not exist."); return (NULL)}
-	if (is.null(bedFile) || !file.exists(bedFile)){print("[ERROR]: BED file does not exist.");return (NULL)}
-	if (length(rpkmPaths) != length(rpkmFids)){print("[ERROR]: Number of rpkmPaths differ from the number rpkmFids.");return (NULL)}
-	if (length(rpkmPaths) < 10){print("[ERROR]: Please provide at least 10 input files");return (NULL)}
-	
-	
-	
-	printBanner()
-	print("[step 1 out of 7] ******  AOH data ******")
-	
-	extAOH <- extAOH
-	
-	print("[step 2 out of 7] ****** Preparing RPKM data ******")
-	selectedFidsIdx <- 1:length(rpkmFids)
-	if (!is.null(extAOH)) {
-		selectedFidsIdx <- which(rpkmFids %in% extAOH$Name)
-	}
-	rpkmDt <- prepareRPKMData(rpkmPaths[selectedFidsIdx], rpkmFids[selectedFidsIdx], 1)
-	tmp <- reorderBedAndRpkmDt(bedFile, rpkmDt)
-	bedOrdered <- tmp$bedOrdered
-	rpkmDtOrdered <- tmp$rpkmDtOrdered
-	
-	print("[step 3 out of 7] ****** SELECTING CANDIDATE EXONS ******")
-	exonMedianRpkms <- colMedians(as.matrix(rpkmDtOrdered[,,with=F]))
-	exonsToExclude <- which (exonMedianRpkms < 7)
-	gc()
-	processRPKMResults <- processRPKM(rpkmDtOrdered, bedOrdered, mc.cores,lowRPKMthreshold,exonsToExclude,maxFrequency=maxFrequency)
-	selectedExonsFinal <- processRPKMResults[["selectedExonsFinal"]]
-	if(length(selectedExonsFinal)==0) {return (NULL)}
-	
-	print("[step 4 out of 7] ****** DELETION CALLING ******")
-	candidateExonCalls <- getCandidateExonCalls (rpkmDtOrdered, bedOrdered, selectedExonsFinal, mc.cores,lowRPKMthreshold)
-	
-	print("[step 5 out of 7] ****** MERGING CALLS FROM CONSECUTIVE EXONS ******")
-	candidatesMerged <- mergeCandidates(candidateExonCalls, bedOrdered)
-	
-	print("[step 6 out of 7] ****** ANNOTATING CALLS ******")
-	candidatesMergedAnnotated <- annotateCandidates (candidatesMerged, is_cmg) 
-	poorSamplesNames <- rownames(rpkmDtOrdered)[processRPKMResults$toRemSamples]
-	finalCandToRemoveIdx <- which(candidatesMergedAnnotated$FID %in% poorSamplesNames)
-	candidatesMergedAnnotated$PoorSample <- FALSE
-	candidatesMergedAnnotated$PoorSample[finalCandToRemoveIdx] <- TRUE
-	candidatesMergedAnnotated$posKey <- paste(candidatesMergedAnnotated$Chr, ":", candidatesMergedAnnotated$Start, "_", candidatesMergedAnnotated$Stop, sep="")
-	candidatesMergedAnnotated[,key:=paste(FID,"_",posKey,sep="")]
-	
-	print("[step 7 out of 7] ****** OVERLAPPING WITH AOH REGIONS AND FILTERING ******")
-	allCalls <- annotateAOH(candidatesMergedAnnotated, extAOH, minAOHsize, minAOHsig, mc.cores)
-	allCalls$ZScore <- calculateZscores(allCalls,rpkmDtOrdered)
-	gc();gc();
-	allCalls <- allCalls [order(allCalls$Length, decreasing=T),]
-	
-	## filtering out calls from low quality samples and calls that do not overlap with any AOH region
-	filteredCalls <- allCalls[which(allCalls[,paste("inAOH_",format(minAOHsize, scientific=F),sep=""),with=F] & !allCalls$PoorSample & allCalls$Length>50),]
-	filteredCalls <- annotateFreq(filteredCalls)
-	filteredCalls[,PerSampleNr:=.N,by=BAB]
-	filteredCalls$ZScore <- calculateZscores(filteredCalls,rpkmDtOrdered)
-	
-	results <- list (filteredCalls = filteredCalls, allCalls=allCalls, bedOrdered = bedOrdered, rpkmDtOrdered = rpkmDtOrdered)
-	
-	return(results)
+  
+  library(gdata)
+  library(data.table)
+  library(GenomicRanges)
+  library(parallel)
+  library(matrixStats)
+  
+  ## checking input parameters
+  
+  if ( any(!file.exists(rpkmPaths))){print("[ERROR]: One or more paths to RPKM file does not exist."); return (NULL)}
+  if (is.null(bedFile) || !file.exists(bedFile)){print("[ERROR]: BED file does not exist.");return (NULL)}
+  if (length(rpkmPaths) != length(rpkmFids)){print("[ERROR]: Number of rpkmPaths differ from the number rpkmFids.");return (NULL)}
+  if (length(rpkmPaths) < 10){print("[ERROR]: Please provide at least 10 input files");return (NULL)}
+  if (!exists("report")){print("[ERROR]: Please provide report");return (NULL)}
+  if (!exists("extAOH")){print("[ERROR]: Please provide extAOH");return (NULL)}
+  
+  
+  printBanner()
+  print("[step 1 out of 7] ******  AOH data ******")
+  
+  extAOH <- extAOH
+  
+  print("[step 2 out of 7] ****** Preparing RPKM data ******")
+  selectedFidsIdx <- 1:length(rpkmFids)
+  if (!is.null(extAOH)) {
+    selectedFidsIdx <- which(rpkmFids %in% extAOH$Name)
+  }
+  rpkmDt <- prepareRPKMData(rpkmPaths[selectedFidsIdx], rpkmFids[selectedFidsIdx], 1)
+  tmp <- reorderBedAndRpkmDt(bedFile, rpkmDt)
+  bedOrdered <- tmp$bedOrdered
+  rpkmDtOrdered <- tmp$rpkmDtOrdered
+  
+  print("[step 3 out of 7] ****** SELECTING CANDIDATE EXONS ******")
+  exonMedianRpkms <- colMedians(as.matrix(rpkmDtOrdered[,,with=F]))
+  exonsToExclude <- which (exonMedianRpkms < 7)
+  gc()
+  processRPKMResults <- processRPKM(rpkmDtOrdered, bedOrdered, mc.cores,lowRPKMthreshold,exonsToExclude,maxFrequency=maxFrequency)
+  selectedExonsFinal <- processRPKMResults[["selectedExonsFinal"]]
+  if(length(selectedExonsFinal)==0) {return (NULL)}
+  
+  print("[step 4 out of 7] ****** DELETION CALLING ******")
+  candidateExonCalls <- getCandidateExonCalls (rpkmDtOrdered, bedOrdered, selectedExonsFinal, mc.cores,lowRPKMthreshold)
+  
+  print("[step 5 out of 7] ****** MERGING CALLS FROM CONSECUTIVE EXONS ******")
+  candidatesMerged <- mergeCandidates(candidateExonCalls, bedOrdered)
+  
+  print("[step 6 out of 7] ****** ANNOTATING CALLS ******")
+  candidatesMergedAnnotated <- annotateCandidates (candidatesMerged, report,is_cmg) 
+  poorSamplesNames <- rownames(rpkmDtOrdered)[processRPKMResults$toRemSamples]
+  finalCandToRemoveIdx <- which(candidatesMergedAnnotated$FID %in% poorSamplesNames)
+  candidatesMergedAnnotated$PoorSample <- FALSE
+  candidatesMergedAnnotated$PoorSample[finalCandToRemoveIdx] <- TRUE
+  candidatesMergedAnnotated$posKey <- paste(candidatesMergedAnnotated$Chr, ":", candidatesMergedAnnotated$Start, "_", candidatesMergedAnnotated$Stop, sep="")
+  candidatesMergedAnnotated[,key:=paste(FID,"_",posKey,sep="")]
+  
+  print("[step 7 out of 7] ****** OVERLAPPING WITH AOH REGIONS AND FILTERING ******")
+  allCalls <- annotateAOH(candidatesMergedAnnotated, extAOH, minAOHsize, minAOHsig, mc.cores)
+  allCalls$ZScore <- calculateZscores(allCalls,rpkmDtOrdered)
+  gc();gc();
+  allCalls <- allCalls [order(allCalls$Length, decreasing=T),]
+  
+  ## filtering out calls from low quality samples and calls that do not overlap with any AOH region
+  filteredCalls <- allCalls[which(allCalls[,paste("inAOH_",format(minAOHsize, scientific=F),sep=""),with=F] & !allCalls$PoorSample & allCalls$Length>50),]
+  filteredCalls <- annotateFreq(filteredCalls)
+  filteredCalls[,PerSampleNr:=.N,by=BAB]
+  filteredCalls$ZScore <- calculateZscores(filteredCalls,rpkmDtOrdered)
+  
+  results <- list (filteredCalls = filteredCalls, allCalls=allCalls, bedOrdered = bedOrdered, rpkmDtOrdered = rpkmDtOrdered)
+  
+  return(results)
 }
-

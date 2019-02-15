@@ -634,11 +634,11 @@ printBanner <- function()
 ##------------------------------------------------------------------------------
 
 runHMZDelFinder <- function(
-  rpkmPaths, rpkmFids,
-  mc.cores, extAOH,
-  bedFile, lowRPKMthreshold,
-  minAOHsize, minAOHsig, is_cmg,report,
-  filter)
+	rpkmPaths, rpkmFids,
+	mc.cores, extAOH,
+	bedFile, lowRPKMthreshold,
+	minAOHsize, minAOHsig, is_cmg,report,
+	filter)
 {
   
   library(gdata)

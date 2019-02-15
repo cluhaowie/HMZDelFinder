@@ -254,6 +254,7 @@ prepareRPKMData <- function(fileNames, fids, mc.cores)
 				if (file.info(file)$size ==0) {return(NULL)}
 				t <- fread(file)
 				t$File <- fid
+				setnames(t, "V3", "RPKM")
 				t
 			}, mc.cores=1)
 	

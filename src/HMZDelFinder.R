@@ -457,7 +457,7 @@ annotateCandidates <- function(candidatesMerged, report, is_cmg=T)
 ##' @param mc.cores							number of cores (see mclapply2)
 ##------------------------------------------------------------------------------
 
-annotateAOH <- function(candidatesMergedAnnotated, extAOH, aohSize, minAOHsig, mc.cores){
+annotateAOH <- function(candidatesMergedAnnotated, extAOH, minAOHsize, minAOHsig, mc.cores){
 	if (is.null(extAOH)){
 		candidatesMergedAnnotated[,paste("inAOH", "_", format(aohSize, scientific=F), sep="")] <- TRUE
 		return (candidatesMergedAnnotated)

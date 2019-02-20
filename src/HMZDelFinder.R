@@ -772,11 +772,14 @@ plotDistribution <- function(sample,medelTrack,gene,rpkmDtOrdered,bedOrdered,out
 ##' @param rpkmOrdered     object from 
 ##' @param bedOrdered
 ##' @param outputDir
-##' @param perClusterMat top 100 person correlation coefficiency matrix ; perClusterMat <- cor(t(rpkmDtOrdered[,sample(1:196907,10000)]));
+##' @param distMat         distance matrix that match rowname of rpkmOrdered; 
+##'				for example person correlation coefficiency matrix(log transformed is preferred) ; 
+##'				 perClusterMat <- cor(t(rpkmDtOrdered[,sample(1:196907,10000)]));
+##'				 rownames(perClusterMat)<-rownames(rpkmOrdered)
 ##' @example sample<-"BAB2992";gene<-"RAI1";plotDistribution(sample,medelTrack,gene,rpkmDtOrdered,bedOrdered,outputDir)
 ##'
 ##'--------------------------------------------
-plotDistribution_TOP100 <- function(sample,medelTrack,gene,rpkmDtOrdered,bedOrdered,outputDir,perClusterMat){
+plotDistribution_TOP100 <- function(sample,medelTrack,gene,rpkmDtOrdered,bedOrdered,outputDir,distMat){
   if(!length(medelTrack[BAB==sample,FIDs])){print("BAB number don't have a FID.");return(NULL)}
   if(!(medelTrack[BAB==sample,FIDs] %in% rownames(rpkmDtOrdered))){print("FID don't have a rpkm record.");return(NULL)}
   if(!length(which(bedOrdered$V4==gene))){print("Gene is not in the bed file.");return(NULL)}
@@ -793,7 +796,7 @@ plotDistribution_TOP100 <- function(sample,medelTrack,gene,rpkmDtOrdered,bedOrde
   
   idx_lth<-which(bedOrdered$V4==gene)
   idx <- max(1, idx_lth[1]-window):min(idx_lth[length(idx_lth)]+window, ncol(rpkmDtOrdered))
-  sorted_inx<-sort(perClusterMat[sampleFID,],decreasing=T,index.return=TRUE)[['ix']][1:100]
+  sorted_inx<-sort(distMat[sampleFID,],decreasing=T,index.return=TRUE)[['ix']][1:100]
   
   ll<-replaceInf(log(rpkmDtOrdered[sorted_inx,idx,with=F ] + 1, 10))
   rownames(ll)<-rownames(rpkmDtOrdered)[sorted_inx]
@@ -816,4 +819,4 @@ plotDistribution_TOP100 <- function(sample,medelTrack,gene,rpkmDtOrdered,bedOrde
   lines(c(min(idx[geneIdx]),max(idx[geneIdx])), c(voffset, voffset), col="darkblue", lwd=3)
   text(mean(idx[geneIdx]), voffset-0.16*vspace, gene, font=3, cex=0.7)
   dev.off()
-}  	     
+}	     

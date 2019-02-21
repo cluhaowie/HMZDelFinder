@@ -820,3 +820,29 @@ plotDistribution_TOP100 <- function(sample,medelTrack,gene,rpkmDtOrdered,bedOrde
   text(mean(idx[geneIdx]), voffset-0.16*vspace, gene, font=3, cex=0.7)
   dev.off()
 }	     
+
+##'------------------------------------------------------------------
+##'call Candidate dup/del exon based on Z-score
+##'
+##'
+##'@param group           each column from disMatOrdered object;distMat distance matrix or similarity matrix(pearson correlation coefficiency)
+##'disMatOrdered <-sapply(rownames(distMat),function(x){sort(distMat[x,],decreasing=T,index.return=TRUE)[['ix']][1:100]})
+##'@param rpkmDtOrdered   log transformed rpkmDtOrdered, note: row names match
+##'@param cutoff          Zscore cutoff, default= +-2
+##'@example mclapply(distMatOrdered,callCandidateExon,rpkmDtOrdered=rpkmDtOrdered,cutoff=2,mc.cores = 8 )
+##'------------------------------------------------------------------
+callCandidateExon<-function(group,rpkmDtOrdered,cutoff=2){
+  gc();
+  ll<-rpkmDtOrdered[group,,]
+  l <- as.vector(ll[1,])
+  rownames(ll)<-rownames(rpkmDtOrdered)[group]
+  Vmedian <- colMedians(as.matrix(ll))
+  Vsd <- colSds(as.matrix(ll))
+  Zscore <- as.numeric((l-Vmedian)/Vsd)
+  candidatesInx <- which(Zscore>cutoff|Zscore< -cutoff);
+  Candidates <- list(Zscore=Zscore,calls= candidatesInx)
+  rm(ll)
+  gc();
+  return(Candidates)
+}				     
+				     

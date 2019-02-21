@@ -833,7 +833,8 @@ plotDistribution_TOP100 <- function(sample,medelTrack,gene,rpkmDtOrdered,bedOrde
 ##'------------------------------------------------------------------
 callCandidateExon<-function(group,rpkmDtOrdered,cutoff=2){
   gc();
-  ll<-rpkmDtOrdered[group,,]
+  group<-as.numeric(unlist(group))
+  ll<-rpkmDtOrdered[group,]
   l <- as.vector(ll[1,])
   rownames(ll)<-rownames(rpkmDtOrdered)[group]
   Vmedian <- colMedians(as.matrix(ll))
@@ -844,5 +845,5 @@ callCandidateExon<-function(group,rpkmDtOrdered,cutoff=2){
   rm(ll)
   gc();
   return(Candidates)
-}				     
+}	     
 				     

@@ -875,5 +875,6 @@ prepareExons <- function(filtercandidateCalls,bedOrdered,candidateZscore){
   }
   print("[******Preparing DEL and DUP calls******]")
   candidateExon <- pbmclapply(seq_along(filtercandidateCalls),temCallfun,filtercandidateCalls,bedOrdered,candidateZscore,mc.cores = 4)
+  names(candidateExon)<- names(filtercandidateCalls)
   return(candidateExon)
 }

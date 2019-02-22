@@ -846,4 +846,27 @@ callCandidateExon<-function(group,rpkmDtOrdered,cutoff=2){
   gc();
   return(Candidates)
 }	     
-				     
+
+##'---------------------------------------------------
+##'Map candidate exon back to bedOrdered file
+##'
+##'
+##' @param filtercandidateCalls    object return from callCandidateExon()
+##' @param candidateZscore         object return from callCandidateExon()
+##' @param bedOrdered
+##' 
+##'---------------------------------------------------
+prepareExons <- function(filtercandidateCalls,bedOrdered,candidateZscore){
+  if(is.null(names(filtercandidateCalls))){print("please check the names of filtercandidateCalls");return(NULL)}
+  library(pbmcapply)
+  library(data.table)
+  temCallfun <- function(i,filtercandidateCalls,bedOrdered,candidateZscore,n=names(filtercandidateCalls)){
+    gc()
+    callname <- n[i]
+    idx <- as.numeric(unlist(filtercandidateCalls[i]))
+    data.table(bedOrdered[idx,],V5=candidateZscore[idx,callname])
+  }
+  print("[******Preparing DEL and DUP calls******]")
+  candidateExon <- pbmclapply(seq_along(filtercandidateCalls),temCallfun,filtercandidateCalls,bedOrdered,candidateZscore,mc.cores = 4)
+  return(candidateExon)
+}

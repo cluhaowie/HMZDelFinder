@@ -874,7 +874,9 @@ prepareExons <- function(filtercandidateCalls,bedOrdered,candidateZscore){
     data.table(bedOrdered[idx,],V5=candidateZscore[idx,callname])
   }
   print("[******Preparing DEL and DUP calls******]")
-  candidateExon <- pbmclapply(seq_along(filtercandidateCalls),temCallfun,filtercandidateCalls,bedOrdered,candidateZscore,mc.cores = 4)
-  names(candidateExon)<- names(filtercandidateCalls)
-  return(candidateExon)
+  temp <- pbmclapply(seq_along(filtercandidateCalls),temCallfun,filtercandidateCalls,bedOrdered,candidateZscore,mc.cores = 4)
+  names(temp)<- names(filtercandidateCalls)
+  candidateExon <- rbindlist(temp,idcol=TRUE)
+  rm(temp);gc()
+  return(candidateExon) 
 }

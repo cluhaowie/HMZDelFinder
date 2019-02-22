@@ -825,27 +825,34 @@ plotDistribution_TOP100 <- function(sample,medelTrack,gene,rpkmDtOrdered,bedOrde
 ##'call Candidate dup/del exon based on Z-score
 ##'
 ##'
-##'@param group           each column from disMatOrdered object;distMat distance matrix or similarity matrix(pearson correlation coefficiency)
+##' @param disMatOrdered   distance/similarity matrix(assuming there will be function to prepare for this matrix)
+##' @param group(in subFun)           each column from disMatOrdered object;distMat distance matrix or similarity matrix(pearson correlation coefficiency)
 ##'disMatOrdered <-sapply(rownames(distMat),function(x){sort(distMat[x,],decreasing=T,index.return=TRUE)[['ix']][1:100]})
-##'@param rpkmDtOrdered   log transformed rpkmDtOrdered, note: row names match
-##'@param cutoff          Zscore cutoff, default= +-2
-##'@example mclapply(distMatOrdered,callCandidateExon,rpkmDtOrdered=rpkmDtOrdered,cutoff=2,mc.cores = 8 )
+##' @param rpkmDtOrdered   log transformed rpkmDtOrdered, note: row names match
+##' @param cutoff          Zscore cutoff, default= +-2
+##' 
+##' @example mclapply(distMatOrdered,callCandidateExon,rpkmDtOrdered=rpkmDtOrdered,cutoff=2,mc.cores = 8 )
 ##'------------------------------------------------------------------
-callCandidateExon<-function(group,rpkmDtOrdered,cutoff=2){
-  gc();
-  group<-as.numeric(unlist(group))
-  ll<-rpkmDtOrdered[group,]
-  l <- as.vector(ll[1,])
-  rownames(ll)<-rownames(rpkmDtOrdered)[group]
-  Vmedian <- colMedians(as.matrix(ll))
-  Vsd <- colSds(as.matrix(ll))
-  Zscore <- as.numeric((l-Vmedian)/Vsd)
-  candidatesInx <- which(Zscore>cutoff|Zscore< -cutoff);
-  Candidates <- list(Zscore=Zscore,calls= candidatesInx)
-  rm(ll)
-  gc();
-  return(Candidates)
-}	     
+callCandidateExon <- function(distMatOrdered,rpkmDtOrdered,cutoff=2, mc.cores = 4){
+  callCandidateExon<-function(group,rpkmDtOrdered,cutoff){
+    gc();
+    group<-as.numeric(unlist(group))
+    ll<-rpkmDtOrdered[group,]
+    l <- as.vector(ll[1,])
+    rownames(ll)<-rownames(rpkmDtOrdered)[group]
+    Vmedian <- colMedians(as.matrix(ll))
+    Vsd <- colSds(as.matrix(ll))
+    Zscore <- as.numeric((l-Vmedian)/Vsd)
+    candidatesInx <- which(Zscore>cutoff|Zscore< -cutoff);
+    Candidates <- list(Zscore=Zscore,calls= candidatesInx)
+    rm(ll)
+    gc();
+    return(Candidates)
+  }
+  print("[******Calculate Zscore and get candidate exons**********]")
+  candidateExon <- pbmclapply(distMatOrdered,callCandidateExon,rpkmDtOrdered,cutoff=cutoff,mc.cores=mc.cores)  ##43.54676 secs
+  return(candidateExon)
+}     
 
 ##'---------------------------------------------------
 ##'Map candidate exon back to bedOrdered file

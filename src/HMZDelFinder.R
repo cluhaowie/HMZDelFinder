@@ -733,7 +733,6 @@ plotDistribution <- function(sample,medelTrack,gene,rpkmDtOrdered,bedOrdered,out
     dm <- data.matrix(x)
     dm[!is.finite(dm)] <- 0
     res <- data.table(dm)
-    rownames(res) <- rownames(x)
     res
   }
   window<-2
@@ -743,6 +742,7 @@ plotDistribution <- function(sample,medelTrack,gene,rpkmDtOrdered,bedOrdered,out
   idx <- max(1, idx_lth[1]-window):min(idx_lth[length(idx_lth)]+window, ncol(rpkmDtOrdered))
   
   ll<-replaceInf(log(rpkmDtOrdered[,idx,with=F ] + 1, 10))
+  rownames(ll)<-rownames(rpkmDtOrdered)
   png(paste0(outputDir,sample,"_",gene,".png",sep=""), width=1000,height=1000, pointsize=25)
   maxV <- max(t(ll))
   vspace <- 0.2* maxV

@@ -838,7 +838,7 @@ callCandidateExon <- function(distMatOrdered,rpkmDtOrdered,cutoff=2, mc.cores = 
     gc();
     group<-as.numeric(unlist(group))
     ll<-rpkmDtOrdered[group,]
-    l <- as.vector(ll[1,])
+    l <- as.numeric(ll[1,])
     rownames(ll)<-rownames(rpkmDtOrdered)[group]
     Vmedian <- colMedians(as.matrix(ll))
     Vsd <- colSds(as.matrix(ll))

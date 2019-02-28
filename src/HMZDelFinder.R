@@ -850,7 +850,7 @@ callCandidateExon <- function(distMatOrdered,rpkmDtOrdered,cutoff=2, mc.cores = 
     return(Candidates)
   }
   print("[******Calculate Zscore and get candidate exons**********]")
-  candidateExon <- pbmclapply(distMatOrdered,callCandidateExon,rpkmDtOrdered,cutoff=cutoff,mc.cores=mc.cores)  ##43.54676 secs
+  candidateExon <- pbmclapply(distMatOrdered,callCandidateExon,rpkmDtOrdered,cutoff=cutoff,mc.cores=mc.cores,max.vector.size =6656)  ##43.54676 secs
   return(candidateExon)
 }     
 
@@ -863,7 +863,7 @@ callCandidateExon <- function(distMatOrdered,rpkmDtOrdered,cutoff=2, mc.cores = 
 ##' @param bedOrdered
 ##' 
 ##'---------------------------------------------------
-prepareExons <- function(filtercandidateCalls,bedOrdered,candidateZscore){
+prepareExons <- function(filtercandidateCalls,bedOrdered,candidateZscore,mc.cores=4){
   if(is.null(names(filtercandidateCalls))){print("please check the names of filtercandidateCalls");return(NULL)}
   library(pbmcapply)
   library(data.table)
@@ -874,7 +874,7 @@ prepareExons <- function(filtercandidateCalls,bedOrdered,candidateZscore){
     data.table(bedOrdered[idx,],V5=candidateZscore[idx,callname])
   }
   print("[******Preparing DEL and DUP calls******]")
-  temp <- pbmclapply(seq_along(filtercandidateCalls),temCallfun,filtercandidateCalls,bedOrdered,candidateZscore,mc.cores = 4)
+  temp <- pbmclapply(seq_along(filtercandidateCalls),temCallfun,filtercandidateCalls,bedOrdered,candidateZscore,mc.cores = mc.cores,max.vector.size =6656)
   names(temp)<- names(filtercandidateCalls)
   candidateExons <- rbindlist(temp,idcol=TRUE)
   colnames(candidateExons)[1] <- "Sample"

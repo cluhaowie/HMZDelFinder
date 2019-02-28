@@ -724,7 +724,7 @@ runHMZDelFinder <- function(
 ##' @example sample<-"BAB2992";gene<-"RAI1";plotDistribution(sample,medelTrack,gene,rpkmDtOrdered,bedOrdered,outputDir)
 ##'
 ##'--------------------------------------------
-plotDistribution <- function(sample,medelTrack,gene,rpkmDtOrdered,bedOrdered,outputDir){
+plotDistribution<-function(sample,medelTrack,gene,rpkmDtOrdered,bedOrdered,outputDir){
   if(!length(medelTrack[BAB==sample,FIDs])){print("BAB number don't have a FID.");return(NULL)}
   if(!(medelTrack[BAB==sample,FIDs] %in% rownames(rpkmDtOrdered))){print("FID don't have a rpkm record.");return(NULL)}
   if(!length(which(bedOrdered$V4==gene))){print("Gene is not in the bed file.");return(NULL)}
@@ -751,6 +751,7 @@ plotDistribution <- function(sample,medelTrack,gene,rpkmDtOrdered,bedOrdered,out
   plot(c(min(idx), max(idx) ), c(-vspace, 1.05*maxV),type="n",xlim=c(min(idx), max(idx) ),xlab="Probe (exon) number",ylab="log(RPKM + 1)")
   matplot(matrix(rep(min(idx):max(idx), nrow(ll)), ncol=nrow(ll)), t(ll), type="l",lty=1, col=trBlack, add=T)
   lines(min(idx):max(idx),ll[which(rownames(rpkmDtOrdered)== sampleFID),],col="red",lwd=3)
+  matplot(t(matrix(rep(idx,2),ncol=2)), t(cbind(rep(0, length(idx)),as.numeric(ll[which(rownames(ll)== sampleFID),]))),add=T,type="l", col="red",lwd=3, lty=1)
   abline(h=log(1+0.65, 10), lwd=3, lty=2, col="blue")
   abline(h=log(1+2*0.65, 10), lwd=3, lty=2, col="blue")
   

@@ -881,3 +881,54 @@ prepareExons <- function(filtercandidateCalls,bedOrdered,candidateZscore,mc.core
   rm(temp);gc()
   return(candidateExons) 
 }
+				     
+				     
+##'---------------------------------------------------
+##'Merge exons to make a consistent call
+##'
+##' @param candiateExonCalls   object return from prepareExons
+##' @param bedOrdered          ordered bed file
+##' @param maxGap              The maxGap can be tolerate by the algorithm
+##'----------------------------------------------------
+mergeCandidates <- function(candidateExonsCalls, bedOrdered, maxGap = 10){
+  resTmp <- by(candidateExonsCalls, candidateExonsCalls$Sample,function(x){
+    maxGap <- 10
+    x$mark_num<-1; x$exon_num<-1
+    x$key <-paste(x$V1,"_",x$V2, sep="")
+    bedOrderedIdx<- match(x$key, paste(bedOrdered$V1,"_", bedOrdered$V2, sep=""))
+    df <- data.frame()
+    j <- 1
+    v  <-  bedOrdered[bedOrderedIdx[1],]
+    v$mark_num<- 1;v$exon_num <- 1
+    v$start_idx<- bedOrderedIdx[1]
+    diffIdx <- diff(bedOrderedIdx)
+    for (i in diffIdx){
+      j <- j + 1
+      if (i >= maxGap){
+        df <- rbindlist(list(df, v))
+        v <-  bedOrdered[bedOrderedIdx[j],]
+        v$mark_num <- 1
+        v$exon_num <- 1
+        v$start_idx<- bedOrderedIdx[j]
+        
+      }else{
+        v$mark_num <- v$mark_num+1 
+        v$V3 <-bedOrdered[bedOrderedIdx[j],"V3"] # replace stop
+        gn <- bedOrdered[bedOrderedIdx[j],"V4"] # gene name
+        if (gdata::trim(gn) != "" && !(gn %in% strsplit(v$V4,",")[[1]])){ v$V4 <- paste(v$V4, gn, sep=",")}
+        v$exon_num <- bedOrderedIdx[j] - v$start_idx + 1
+        z <- bedOrdered[bedOrderedIdx[j],]
+      }}
+    df <- rbindlist(list(df, v))
+    df$Sample<-x$Sample[1]
+    x <- as.data.frame(df)
+    data.table(x[,c("V1", "V2", "V3", "V4","start_idx", "mark_num","exon_num","Sample")])
+  })
+  res <- rbindlist(resTmp)
+  res <- res[order(res$V1, res$V2),]	
+  colnames(res) <- c("Chr", "Start","Stop","Genes","Start_idx","Mark_num","Exon_num","FID")
+  res$Length <- res$Stop - res$Start
+  res[order(res$Length, decreasing=T), ]
+  res
+}
+

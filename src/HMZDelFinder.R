@@ -891,8 +891,9 @@ prepareExons <- function(filtercandidateCalls,bedOrdered,candidateZscore,mc.core
 ##' @param bedOrdered          ordered bed file
 ##' @param maxGap              The maxGap can be tolerate by the algorithm
 ##'----------------------------------------------------
-mergeCandidates <- function(candidateExonsCalls, bedOrdered, maxGap = 10){
-  resTmp <- by(candidateExonsCalls, candidateExonsCalls$Sample,function(x){
+mergeCandidates <- function(candidateExonsCalls, bedOrdered, maxGap = 10, mc.cores=6){
+  resTmplist <- split.data.frame(candidateExonsCalls,candidateExonsCalls$Sample)
+  MergeFUN <- function(x){
     maxGap <- 10
     x$mark_num<-1; x$exon_num<-1
     x$key <-paste(x$V1,"_",x$V2, sep="")
@@ -924,12 +925,13 @@ mergeCandidates <- function(candidateExonsCalls, bedOrdered, maxGap = 10){
     df$Sample<-x$Sample[1]
     x <- as.data.frame(df)
     data.table(x[,c("V1", "V2", "V3", "V4","start_idx", "mark_num","exon_num","Sample")])
-  })
+  }
+  resTmp <- pbmclapply(resTmplist,MergeFUN,mc.cores = mc.cores)
   res <- rbindlist(resTmp)
+  rm(resTmplist,resTmp);gc()
   res <- res[order(res$V1, res$V2),]	
   colnames(res) <- c("Chr", "Start","Stop","Genes","Start_idx","Mark_num","Exon_num","FID")
   res$Length <- res$Stop - res$Start
   res[order(res$Length, decreasing=T), ]
   res
 }
-

@@ -437,9 +437,9 @@ annotateCandidates <- function(candidatesMerged, report, is_cmg=T)
   candidatesMerged$project <- ""
   if (is_cmg)
   {
-    report <- report[-which(report$Fid=="NA"),]
-    candidatesMerged$BAB <- report$Internal.Processing.Sample.ID[match(candidatesMerged$FID, report$Fid)]
-    candidatesMerged$project <- report$Metaproject[match(candidatesMerged$FID, report$Fid)]
+    report <- report[-which(report$FIDs=="NA"),]
+    candidatesMerged$BAB <- report$BAB[match(candidatesMerged$FID, report$FIDs)]
+    candidatesMerged$project <- report$Metaproject[match(candidatesMerged$FID, report$FIDs)]
     candidatesMerged$BAB[is.na(candidatesMerged$BAB)] <- candidatesMerged$FID[is.na(candidatesMerged$BAB)]
   }
   candidatesMerged

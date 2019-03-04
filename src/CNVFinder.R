@@ -1,4 +1,32 @@
 ##'---------------------------------------------------
+##'Map candidate exon back to bedOrdered file
+##'
+##'
+##' @param filtercandidateCalls    object return from callCandidateExon()
+##' @param candidateZscore         object return from callCandidateExon()
+##' @param bedOrdered
+##' 
+##'---------------------------------------------------
+prepareExons <- function(filtercandidateCalls,bedOrdered,candidateZscore,mc.cores=4){
+  if(is.null(names(filtercandidateCalls))){print("please check the names of filtercandidateCalls");return(NULL)}
+  library(pbmcapply)
+  library(data.table)
+  temCallfun <- function(i,filtercandidateCalls,bedOrdered,candidateZscore,n=names(filtercandidateCalls)){
+    gc()
+    callname <- n[i]
+    idx <- as.numeric(unlist(filtercandidateCalls[i]))
+    data.table(bedOrdered[idx,],V5=candidateZscore[idx,callname])
+  }
+  print("[******Preparing DEL and DUP calls******]")
+  temp <- pbmclapply(seq_along(filtercandidateCalls),temCallfun,filtercandidateCalls,bedOrdered,candidateZscore,mc.cores = mc.cores,max.vector.size =6656)
+  names(temp)<- names(filtercandidateCalls)
+  candidateExons <- rbindlist(temp,idcol=TRUE)
+  colnames(candidateExons)[1] <- "Sample"
+  rm(temp);gc()
+  return(candidateExons) 
+}
+
+##'---------------------------------------------------
 ##'Merge exons to make a consistent call
 ##'
 ##' @param candiateExonCalls   object return from prepareExons

@@ -892,7 +892,7 @@ prepareExons <- function(filtercandidateCalls,bedOrdered,candidateZscore,mc.core
 ##' @param maxGap              The maxGap can be tolerate by the algorithm
 ##'----------------------------------------------------
 mergeCandidates <- function(candidateExonsCalls, bedOrdered, maxGap = 10, mc.cores=6){
-  resTmplist <- split.data.frame(candidateExonsCalls,candidateExonsCalls$Sample)
+  resTmplist <- split(candidateExonsCalls,candidateExonsCalls$Sample)
   MergeFUN <- function(x){
     maxGap <- 10
     x$mark_num<-1; x$exon_num<-1

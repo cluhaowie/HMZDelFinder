@@ -157,7 +157,7 @@ prepareExons <- function(filtercandidateCalls,bedOrdered,candidateZscore,mc.core
     gc()
     callname <- n[i]
     idx <- as.numeric(unlist(filtercandidateCalls[i]))
-    data.table(bedOrdered[idx,],V5=candidateZscore[idx,callname])
+    data.table(bedOrdered[idx,],V5=candidateZscore[idx,callname,with=FALSE])
   }
   print("[******Preparing DEL and DUP calls******]")
   temp <- pbmclapply(seq_along(filtercandidateCalls),temCallfun,filtercandidateCalls,bedOrdered,candidateZscore,mc.cores = mc.cores,max.vector.size =6656)

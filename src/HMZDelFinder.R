@@ -936,3 +936,37 @@ mergeCandidates <- function(candidateExonsCalls, bedOrdered, maxGap = 10, mc.cor
   res[order(res$Length, decreasing=T), ]
   res
 }
+				     
+##------------------------------------------------------------------------------
+##' Finds overlap between calls and AOH regions
+##' 
+##' 
+##' @param candidatesMergedAnnotated		object returned by annotateCandidates
+##' @param extAOH							object returned by prepareAOHData
+##' @param aohSize							min AOH size 
+##' @param minAOHsig						AOH signal threshold
+##' @param mc.cores							number of cores (see mclapply2)
+##------------------------------------------------------------------------------
+annotateAOH2 <- function(candidatesMergedAnnotated, extAOH, minAOHsize, minAOHsig, mc.cores){
+  aohSize<-minAOHsize
+  if (is.null(extAOH)){
+    candidatesMergedAnnotated[,paste("inAOH", "_", format(aohSize, scientific=F), sep="")] <- TRUE
+    return (candidatesMergedAnnotated)
+  }
+  tmpRes <- pbmclapply((1:length(unique(candidatesMergedAnnotated$FID))), function(i){ fid <- unique(candidatesMergedAnnotated$FID)[i]
+  tmpCand <- candidatesMergedAnnotated[candidatesMergedAnnotated$FID == fid,]
+  tmpCand [,paste("inAOH", "_", format(aohSize, scientific=F), sep="")] <- FALSE
+  starts <- tmpCand$Start
+  stops <- tmpCand$Stop
+  stops [which(starts > stops)] <- starts[which(starts > stops)]
+  finalCandGR <- GRanges(tmpCand$Chr, IRanges(starts, stops))
+  selAOH_tmp <- extAOH[extAOH$Name == fid & extAOH$Length > aohSize & extAOH$seg.mean > minAOHsig,]
+  selAOH_tmp_gr <- GRanges(selAOH_tmp$chrom, IRanges(selAOH_tmp$loc.start.ext, selAOH_tmp$loc.end.ext))
+  mm_tmp <- as.matrix(findOverlaps(finalCandGR, selAOH_tmp_gr))
+  tmpCand[unique(mm_tmp[,1]), paste("inAOH", "_", format(aohSize, scientific=F), sep="")] <- TRUE
+  tmpCand		
+  },mc.cores=mc.cores)
+  res <- rbindlist(tmpRes)
+  res
+  
+}

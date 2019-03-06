@@ -164,6 +164,7 @@ prepareExons <- function(filtercandidateCalls,bedOrdered,candidateZscore,mc.core
   names(temp)<- names(filtercandidateCalls)
   candidateExons <- rbindlist(temp,idcol=TRUE)
   colnames(candidateExons)[1] <- "Sample"
+  colnames(candidateExons)[6] <- "V5"
   rm(temp);gc()
   return(candidateExons) 
 }

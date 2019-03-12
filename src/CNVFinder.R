@@ -1,3 +1,38 @@
+##------------------------------------------------------------------------------
+##' Reads RPKM files and creates rpkmDt data.table with
+##' samples in rows and exons in columns
+##' 
+##' 
+##' @param fileNames	a vector of paths to RPKM files
+##' @param fids			a vector of sample names of the same length as fileNames
+##' @param mc.cores		number of cores (see mclapply)
+##------------------------------------------------------------------------------
+prepareRPKMData <- function(fileNames, fids, mc.cores=4)
+{
+  print ("Reading RPKM files ...")
+  rpkmList <- pbmclapply(1:length(fileNames), function(i){
+    file <- fileNames[i]; fid <- fids[i]
+    if (file.info(file)$size ==0) {return(NULL)}
+    t <- fread(file)
+    t$File <- fid
+    t
+  }, mc.cores=1)
+  
+  names(rpkmList) <- fids
+  print ("Removing empty elements ...")
+  rpkmList2 <- Filter(function(x){!is.null(x)}, rpkmList)
+  print ("Creating matrix ...")
+  rpkmDf <- do.call(rbind,pbmclapply(rpkmList, function(x){x$RPKM}, mc.cores=mc.cores))
+  rownames(rpkmDf) <- names(rpkmList2)
+  rm(rpkmList);rm(rpkmList2);gc();gc();
+  sn <- rownames(rpkmDf)
+  print ("Creating data.table (may take a while)...")
+  rpkmDt <- data.table(rpkmDf)
+  rm(rpkmDf)
+  rownames(rpkmDt) <- sn
+  rpkmDt
+}
+
 ##'------------------------------------------
 ##' Plot RPKM distribution on specific gene region and sample
 ##' 

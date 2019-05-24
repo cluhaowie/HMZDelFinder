@@ -294,3 +294,79 @@ annotateAOH <- function(candidatesMergedAnnotated, extAOH, minAOHsize, minAOHsig
   res
   
 }
+
+##------------------------------------------------------------------------------
+##' Calculate the GC content ratio of intervals
+##' NOTE: Indexed Ref fasta files (.fai) should be available
+##' 
+##' @description Adopted from PureCN/R/preprocessIntervals.R function
+##' @param interval.gr    GR object - march the name style(chr1 or 1)
+##'                    - seqname
+##'                    - start
+##'                    - stop
+##' @param reference.file	  	  paths to fa files  
+##' @return GR object with metadata column 'gc_bias'
+##------------------------------------------------------------------------------
+
+annotateIntervalsGC <- function(interval.gr, reference.file) {
+  require(GenomicRanges)
+  require(Rsamtools)
+  print("Calculating GC-content...")
+  x <- scanFa(reference.file, interval.gr)
+  GC.count <- letterFrequency(x,"GC")
+  all.count <- letterFrequency(x,"ATGC")
+  interval.gr$gc_bias <- as.vector(ifelse(all.count==0,NA,GC.count/all.count))
+  # exclude unavailable regions
+  interval.gr[which(!is.na(interval.gr$gc_bias))]
+}
+
+##------------------------------------------------------------------------------
+##' add annotation to GR metadata
+##' 
+##' 
+##' @description Adopted from PureCN/R/preprocessIntervals.R function
+##' @param interval.gr    GR object - march the name style(chr1 or 1)
+##'                    - seqname
+##'                    - start
+##'                    - stop
+##' @param y  	  GR object with annotated interval 
+##' @param label  metadata colmn name
+##' @return add annotation to interval.gr metadata column with label name
+##------------------------------------------------------------------------------
+addScoreToGr <- function(interval.gr, y, label) {
+  require(GenomicRanges)
+  .checkColScore <- function(y, label) {
+    colScore <- if (is.null(y$score)) 1 else "score"
+    if (!is(mcols(y)[, colScore], "numeric")) {
+      print("Score column in %s file is not numeric.", label)
+      class(mcols(y)[, colScore]) <- "numeric"
+    }
+    y
+  }
+  .getColScore <- function(y) {
+    colScore <- if (is.null(y$score)) 1 else "score"
+  }
+  mcols(interval.gr)[[label]] <- NA
+  if (!is.null(y)) {
+    y <- .checkColScore(y, label)
+    ov <- findOverlaps(interval.gr, y)
+    colScore <- .getColScore(y)
+    
+    mappScore <- aggregate(mcols(y)[subjectHits(ov),colScore], 
+                           by=list(queryHits(ov)), mean)
+    mcols(interval.gr)[[label]][mappScore[,1]] <- mappScore[,2]
+    idxNA <- is.na(mcols(interval.gr)[[label]])
+    
+    if (sum(idxNA)) {
+      if (!is.null(interval.gr$on.target)) {
+        sumOntarget <- sum(idxNA & interval.gr$on.target, na.rm = TRUE)
+        flog.warn("%i intervals without %s score (%i on-target).", 
+                  sum(idxNA), label, sumOntarget)
+      }
+      mcols(interval.gr)[[label]][idxNA] <- 0
+    }    
+  } else {
+    print("No %s scores provided.", label)
+  }    
+  return(interval.gr)
+}
